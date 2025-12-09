@@ -1,0 +1,345 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Premium Business Design System - Modern gradients and professional aesthetics */
+
+@layer base {
+  :root {
+    /* Core Brand Colors */
+    --background: 28 55% 97%;
+    --foreground: 22 65% 15%;
+
+    --card: 28 55% 97%;
+    --card-foreground: 22 65% 15%;
+
+    --popover: 28 55% 97%;
+    --popover-foreground: 22 65% 15%;
+
+    /* Spice Brand Palette */
+    --primary: 23 86% 46%;
+    --primary-foreground: 28 100% 96%;
+    --primary-glow: 27 93% 55%;
+
+    --secondary: 17 38% 89%;
+    --secondary-foreground: 22 55% 20%;
+
+    --muted: 22 30% 82%;
+    --muted-foreground: 23 30% 32%;
+
+    --accent: 42 90% 60%;
+    --accent-foreground: 28 90% 98%;
+
+    --destructive: 2 78% 56%;
+    --destructive-foreground: 28 100% 96%;
+
+    --success: 142 35% 45%;
+    --success-foreground: 28 100% 97%;
+
+    --warning: 38 92% 55%;
+    --warning-foreground: 28 100% 96%;
+
+    --border: 22 25% 78%;
+    --input: 22 25% 78%;
+    --ring: 42 90% 60%;
+
+    /* Spice Gradients */
+    --gradient-primary: linear-gradient(135deg, hsl(23 86% 46%) 0%, hsl(27 93% 55%) 65%, rgba(244, 182, 58, 0.18) 100%);
+    --gradient-secondary: linear-gradient(135deg, hsl(22 46% 48%) 0%, hsl(17 38% 89%) 100%);
+    --gradient-hero: linear-gradient(135deg, rgba(30, 13, 5, 0.92) 0%, rgba(200, 90, 22, 0.92) 55%, rgba(244, 182, 58, 0.88) 100%);
+    --gradient-glass: linear-gradient(135deg, rgba(255, 255, 255, 0.18) 0%, rgba(255, 196, 141, 0.08) 100%);
+    
+    /* Spice Shadows */
+    --shadow-elegant: 0 25px 45px -20px rgba(200, 90, 22, 0.38);
+    --shadow-glass: 0 18px 60px rgba(73, 42, 23, 0.28);
+    --shadow-premium: 0 30px 80px -35px rgba(56, 33, 18, 0.6);
+
+    /* Animation Variables */
+    --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    --transition-bounce: all 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+
+    --radius: 0.875rem;
+
+    --sidebar-background: 24 36% 94%;
+    --sidebar-foreground: 25 32% 27%;
+    --sidebar-primary: 23 86% 46%;
+    --sidebar-primary-foreground: 28 100% 96%;
+    --sidebar-accent: 42 90% 60%;
+    --sidebar-accent-foreground: 28 90% 98%;
+    --sidebar-border: 22 25% 78%;
+    --sidebar-ring: 42 90% 60%;
+  }
+
+  .dark {
+    --background: 23 34% 10%;
+    --foreground: 28 100% 96%;
+
+    --card: 24 28% 13%;
+    --card-foreground: 28 100% 96%;
+
+    --popover: 24 28% 13%;
+    --popover-foreground: 28 100% 96%;
+
+    --primary: 26 77% 55%;
+    --primary-foreground: 24 100% 96%;
+    --primary-glow: 27 93% 63%;
+
+    --secondary: 26 32% 18%;
+    --secondary-foreground: 28 100% 96%;
+
+    --muted: 27 22% 24%;
+    --muted-foreground: 33 32% 75%;
+
+    --accent: 42 90% 60%;
+    --accent-foreground: 28 90% 98%;
+
+    --destructive: 2 72% 48%;
+    --destructive-foreground: 28 100% 96%;
+
+    --success: 142 35% 45%;
+    --success-foreground: 28 100% 96%;
+
+    --warning: 38 92% 55%;
+    --warning-foreground: 28 100% 96%;
+
+    --border: 27 22% 24%;
+    --input: 27 22% 24%;
+    --ring: 42 90% 60%;
+
+    /* Dark Mode Gradients */
+    --gradient-primary: linear-gradient(135deg, hsl(26 77% 55%) 0%, hsl(27 93% 63%) 100%);
+    --gradient-secondary: linear-gradient(135deg, rgba(60, 33, 20, 0.95) 0%, rgba(125, 64, 36, 0.92) 100%);
+    --gradient-hero: linear-gradient(135deg, rgba(21, 10, 6, 0.94) 0%, rgba(150, 68, 30, 0.92) 55%, rgba(244, 182, 58, 0.65) 100%);
+    --gradient-glass: linear-gradient(135deg, rgba(255, 255, 255, 0.14) 0%, rgba(255, 196, 141, 0.12) 100%);
+
+    --shadow-elegant: 0 25px 45px -20px rgba(200, 90, 22, 0.45);
+    --shadow-glass: 0 18px 60px rgba(13, 8, 5, 0.55);
+    --shadow-premium: 0 30px 80px -35px rgba(0, 0, 0, 0.65);
+    --sidebar-background: 25 28% 14%;
+    --sidebar-foreground: 28 100% 96%;
+    --sidebar-primary: 26 77% 55%;
+    --sidebar-primary-foreground: 24 100% 96%;
+    --sidebar-accent: 42 90% 60%;
+    --sidebar-accent-foreground: 28 90% 98%;
+    --sidebar-border: 27 22% 24%;
+    --sidebar-ring: 42 90% 60%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-solid;
+  }
+
+  body {
+    @apply bg-background text-foreground font-inter;
+    font-feature-settings: 'cv11', 'ss01';
+    text-rendering: optimizeLegibility;
+  }
+
+  html {
+    scroll-behavior: smooth;
+  }
+}
+
+@layer components {
+  /* Premium Glass Card */
+  .glass-card {
+    @apply bg-white/10 backdrop-blur-lg border border-white/20;
+    box-shadow: var(--shadow-glass);
+  }
+
+  /* Premium Button Variants */
+  .btn-premium {
+    background: var(--gradient-primary);
+    @apply text-white font-medium px-8 py-3 rounded-xl;
+    box-shadow: var(--shadow-elegant);
+    transition: var(--transition-smooth);
+  }
+
+  .btn-premium:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-premium);
+  }
+
+  /* Gradient Text */
+  .gradient-text {
+    background: var(--gradient-primary);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  /* Floating Animation */
+  .float-animation {
+    animation: float 3s ease-in-out infinite;
+  }
+
+  @keyframes float {
+    0%, 100% { transform: translateY(0px); }
+    50% { transform: translateY(-10px); }
+  }
+
+  /* Fade In Up Animation */
+  .fade-in-up {
+    animation: fadeInUp 0.8s ease-out forwards;
+    opacity: 0;
+    transform: translateY(30px);
+  }
+
+  @keyframes fadeInUp {
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  /* Stagger Animation */
+  .fade-in-up:nth-child(1) { animation-delay: 0.1s; }
+  .fade-in-up:nth-child(2) { animation-delay: 0.2s; }
+  .fade-in-up:nth-child(3) { animation-delay: 0.3s; }
+  .fade-in-up:nth-child(4) { animation-delay: 0.4s; }
+  .fade-in-up:nth-child(5) { animation-delay: 0.5s; }
+
+  /* Responsive Typography */
+  .text-responsive-xs {
+    @apply text-xs sm:text-sm;
+  }
+
+  .text-responsive-sm {
+    @apply text-sm sm:text-base;
+  }
+
+  .text-responsive-base {
+    @apply text-base sm:text-lg;
+  }
+
+  .text-responsive-lg {
+    @apply text-lg sm:text-xl;
+  }
+
+  .text-responsive-xl {
+    @apply text-xl sm:text-2xl;
+  }
+
+  .text-responsive-2xl {
+    @apply text-2xl sm:text-3xl lg:text-4xl;
+  }
+
+  .text-responsive-3xl {
+    @apply text-3xl sm:text-4xl lg:text-5xl xl:text-6xl;
+  }
+
+  .text-responsive-4xl {
+    @apply text-4xl sm:text-5xl lg:text-6xl xl:text-7xl 2xl:text-8xl;
+  }
+
+  /* Responsive Spacing */
+  .space-responsive-sm {
+    @apply space-y-2 sm:space-y-3 lg:space-y-4;
+  }
+
+  .space-responsive-md {
+    @apply space-y-4 sm:space-y-6 lg:space-y-8;
+  }
+
+  .space-responsive-lg {
+    @apply space-y-6 sm:space-y-8 lg:space-y-12;
+  }
+
+  /* Responsive Padding */
+  .p-responsive-sm {
+    @apply p-3 sm:p-4 lg:p-6;
+  }
+
+  .p-responsive-md {
+    @apply p-4 sm:p-6 lg:p-8;
+  }
+
+  .p-responsive-lg {
+    @apply p-6 sm:p-8 lg:p-12;
+  }
+
+  /* Responsive Margins */
+  .m-responsive-sm {
+    @apply m-3 sm:m-4 lg:m-6;
+  }
+
+  .m-responsive-md {
+    @apply m-4 sm:m-6 lg:m-8;
+  }
+
+  .m-responsive-lg {
+    @apply m-6 sm:m-8 lg:m-12;
+  }
+
+  /* Responsive Grid */
+  .grid-responsive-1 {
+    @apply grid-cols-1 sm:grid-cols-2 lg:grid-cols-3;
+  }
+
+  .grid-responsive-2 {
+    @apply grid-cols-1 sm:grid-cols-2 lg:grid-cols-4;
+  }
+
+  .grid-responsive-3 {
+    @apply grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5;
+  }
+
+  /* Responsive Flex */
+  .flex-responsive-col {
+    @apply flex-col sm:flex-row;
+  }
+
+  .flex-responsive-row {
+    @apply flex-row sm:flex-col lg:flex-row;
+  }
+
+  /* Responsive Visibility */
+  .visible-mobile {
+    @apply block sm:hidden;
+  }
+
+  .visible-tablet {
+    @apply hidden sm:block lg:hidden;
+  }
+
+  .visible-desktop {
+    @apply hidden lg:block;
+  }
+
+  /* Responsive Container */
+  .container-responsive {
+    @apply container mx-auto px-4 sm:px-6 lg:px-8;
+  }
+
+  /* Responsive Images */
+  .img-responsive {
+    @apply w-full h-auto max-w-full;
+  }
+
+  .img-responsive-square {
+    @apply aspect-square w-full h-auto max-w-full;
+  }
+
+  .img-responsive-16-9 {
+    @apply aspect-video w-full h-auto max-w-full;
+  }
+
+  /* Responsive Animations */
+  .animate-responsive-fade-in {
+    @apply opacity-0 animate-fade-in-up;
+  }
+
+  .animate-responsive-slide-left {
+    @apply opacity-0 animate-slide-in-left;
+  }
+
+  .animate-responsive-slide-right {
+    @apply opacity-0 animate-slide-in-right;
+  }
+
+  .animate-responsive-scale {
+    @apply opacity-0 animate-scale-in;
+  }
+}
