@@ -24,7 +24,7 @@ jobs:
           node-version: 18
           cache: 'npm'
 
-      - name: Install dependencies
+      - name: Install dependencies (app)
         working-directory: ./oggarane-foods-web
         run: npm ci
 
@@ -45,6 +45,6 @@ jobs:
           azure_static_web_apps_api_token: ${{ secrets.AZURE_STATIC_WEB_APPS_API_TOKEN }}
           repo_token: ${{ secrets.GITHUB_TOKEN }}
           action: "upload"
-          app_location: "oggarane-foods-web"            # <-- source code folder in your repo
-          api_location: ""                              # <-- leave empty if no Functions
-          output_location: "oggarane-foods-web/dist"    # <-- where the build artifacts are
+          app_location: "oggarane-foods-web"
+          api_location: ""
+          output_location: "oggarane-foods-web/dist"
