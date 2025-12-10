@@ -7,7 +7,6 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { useNotifications } from "@/contexts/NotificationContext";
 import { useTranslation } from "react-i18next";
 
 interface FeedbackFormData {
@@ -22,7 +21,6 @@ interface FeedbackFormData {
 const FeedbackForm = () => {
   const { t } = useTranslation();
   const { toast } = useToast();
-  const { sendContactForm, isConnected } = useNotifications();
   
   const [formData, setFormData] = useState<FeedbackFormData>({
     name: "",
@@ -100,16 +98,24 @@ const FeedbackForm = () => {
         review: formData.review
       };
 
-      if (isConnected) {
-        await sendContactForm(feedbackData);
-      }
+      // Call Azure Static Web Apps API function
+      const response = await fetch('/api/sendContactEmail', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(feedbackData),
+      });
 
-      // Simulate API call for feedback submission
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      const result = await response.json();
+
+      if (!result.success) {
+        throw new Error(result.message || 'Failed to submit feedback');
+      }
 
       toast({
         title: t("Feedback Submitted Successfully!"),
-        description: t("Thank you for your valuable feedback. It will be reflected in our customer reviews section."),
+        description: t("Thank you for your valuable feedback. A confirmation email has been sent to your inbox."),
       });
 
       // Reset form

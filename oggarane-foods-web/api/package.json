@@ -1,0 +1,10 @@
+{
+  "name": "oggarane-foods-api",
+  "version": "1.0.0",
+  "description": "Azure Functions for Oggarane Foods",
+  "main": "index.js",
+  "dependencies": {
+    "nodemailer": "^7.0.9"
+  }
+}
+

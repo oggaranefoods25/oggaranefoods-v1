@@ -4,7 +4,7 @@ import { Server } from 'socket.io';
 import nodemailer from 'nodemailer';
 import cors from 'cors';
 import dotenv from 'dotenv';
-import { SESClient, SendEmailCommand } from '@aws-sdk/client-ses';
+import { EmailClient } from '@azure/communication-email';
 
 dotenv.config();
 
@@ -52,30 +52,30 @@ app.use(cors({
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
 
-// SMTP Configuration (still used for /smtp-status and /test-smtp)
-// This is the email account that will SEND emails on behalf of the website
-// Anyone can use the contact form - this just determines the "from" address
-const transporter = nodemailer.createTransport({
-  host: process.env.SMTP_HOST || 'smtp.gmail.com',
-  port: process.env.SMTP_PORT || 587,
-  secure: false, // true for 465, false for other ports
-  auth: {
-    user: process.env.SMTP_USER || 'your-email@gmail.com',
-    pass: process.env.SMTP_PASS || 'your-app-password'
+// Azure Communication Services Email Configuration
+let emailClient = null;
+if (process.env.AZURE_COMMUNICATION_SERVICES_CONNECTION_STRING) {
+  try {
+    emailClient = new EmailClient(process.env.AZURE_COMMUNICATION_SERVICES_CONNECTION_STRING);
+    console.log('✅ Azure Communication Services Email client initialized');
+  } catch (error) {
+    console.warn('⚠️ Failed to initialize Azure Email client:', error.message);
   }
-});
+} else {
+  console.warn('⚠️ Azure Communication Services connection string not provided');
+}
 
-// AWS SES Configuration for Contact Us emails
-const awsRegion = process.env.AWS_REGION || 'ap-south-1';
-const sesClient = new SESClient({
-  region: awsRegion,
-  credentials:
-    process.env.AWS_ACCESS_KEY_ID && process.env.AWS_SECRET_ACCESS_KEY
-      ? {
-          accessKeyId: process.env.AWS_ACCESS_KEY_ID,
-          secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
-        }
-      : undefined,
+// SMTP Configuration (GoDaddy Email)
+// This is used for sending emails via GoDaddy SMTP
+const smtpPort = parseInt(process.env.SMTP_PORT) || 465;
+const transporter = nodemailer.createTransport({
+  host: process.env.SMTP_HOST || 'smtpout.secureserver.net',
+  port: smtpPort,
+  secure: smtpPort === 465, // true for 465 (SSL), false for 587 (STARTTLS)
+  auth: {
+    user: process.env.SMTP_USER || 'support@oggaranefoods.com',
+    pass: process.env.SMTP_PASS || ''
+  }
 });
 
 // Verify SMTP connection
@@ -87,32 +87,58 @@ transporter.verify((error, success) => {
   }
 });
 
-// Email sending helper function with SES primary and SMTP fallback
-async function sendEmailWithFallback(to, subject, html, fromAddress) {
-  // Try AWS SES first
-  try {
-    const sesParams = {
-      Source: fromAddress,
-      Destination: { ToAddresses: [to] },
-      Message: {
-        Subject: { Data: subject, Charset: 'UTF-8' },
-        Body: {
-          Html: { Data: html, Charset: 'UTF-8' },
+// Email sending helper function with Azure Email primary and SMTP fallback
+async function sendEmail(to, subject, html, fromAddress) {
+  // Try Azure Communication Services Email first
+  if (emailClient) {
+    try {
+      const emailMessage = {
+        senderAddress: fromAddress,
+        recipients: {
+          to: [{ address: to }],
         },
-      },
-    };
+        content: {
+          subject: subject,
+          html: html,
+        },
+      };
 
-    const sesResponse = await sesClient.send(new SendEmailCommand(sesParams));
-    console.log(`✅ Email sent via SES to ${to}:`, sesResponse.MessageId);
-    return {
-      success: true,
-      method: 'SES',
-      messageId: sesResponse.MessageId,
-    };
-  } catch (sesError) {
-    console.warn(`⚠️ SES failed for ${to}, falling back to SMTP:`, sesError.message);
-    
-    // Fallback to SMTP
+      const response = await emailClient.beginSend(emailMessage);
+      const result = await response.pollUntilDone();
+      
+      console.log(`✅ Email sent via Azure Email Service to ${to}:`, result.id);
+      return {
+        success: true,
+        method: 'Azure Email',
+        messageId: result.id,
+      };
+    } catch (azureError) {
+      console.warn(`⚠️ Azure Email Service failed for ${to}, falling back to SMTP:`, azureError.message);
+      
+      // Fallback to SMTP
+      try {
+        const smtpOptions = {
+          from: fromAddress,
+          to: to,
+          subject: subject,
+          html: html,
+        };
+
+        const smtpInfo = await transporter.sendMail(smtpOptions);
+        console.log(`✅ Email sent via SMTP (fallback) to ${to}:`, smtpInfo.messageId);
+        return {
+          success: true,
+          method: 'SMTP',
+          messageId: smtpInfo.messageId,
+          fallbackUsed: true,
+        };
+      } catch (smtpError) {
+        console.error(`❌ Both Azure Email and SMTP failed for ${to}:`, smtpError.message);
+        throw new Error(`Email sending failed: Azure error - ${azureError.message}, SMTP error - ${smtpError.message}`);
+      }
+    }
+  } else {
+    // Azure Email not configured, use SMTP only
     try {
       const smtpOptions = {
         from: fromAddress,
@@ -122,16 +148,15 @@ async function sendEmailWithFallback(to, subject, html, fromAddress) {
       };
 
       const smtpInfo = await transporter.sendMail(smtpOptions);
-      console.log(`✅ Email sent via SMTP (fallback) to ${to}:`, smtpInfo.messageId);
+      console.log(`✅ Email sent via SMTP to ${to}:`, smtpInfo.messageId);
       return {
         success: true,
         method: 'SMTP',
         messageId: smtpInfo.messageId,
-        fallbackUsed: true,
       };
     } catch (smtpError) {
-      console.error(`❌ Both SES and SMTP failed for ${to}:`, smtpError.message);
-      throw new Error(`Email sending failed: SES error - ${sesError.message}, SMTP error - ${smtpError.message}`);
+      console.error(`❌ SMTP failed for ${to}:`, smtpError.message);
+      throw new Error(`Email sending failed: ${smtpError.message}`);
     }
   }
 }
@@ -164,8 +189,8 @@ io.on('connection', (socket) => {
         ? `New Customer Feedback - ${formData.rating}/5 stars for ${formData.product}`
         : `New Contact Form Submission from ${formData.name}`;
 
-      const fromAddress = process.env.SES_FROM_EMAIL || process.env.SMTP_USER || 'your-email@gmail.com';
-      const ownerEmail = process.env.SES_OWNER_EMAIL || process.env.CONTACT_EMAIL || 'oggaranefoods@gmail.com';
+      const fromAddress = process.env.AZURE_EMAIL_FROM_ADDRESS || process.env.SMTP_USER || 'support@oggaranefoods.com';
+      const ownerEmail = process.env.CONTACT_EMAIL || 'support@oggaranefoods.com';
 
       // Prepare HTML bodies (reuse existing templates)
       const ownerHtml = `
@@ -200,7 +225,7 @@ io.on('connection', (socket) => {
             </blockquote>
             <p>Your feedback helps us improve our products and services. ${formData.rating < 3.5 ? 'We will personally follow up with you to address any concerns.' : 'We\'re thrilled you enjoyed our product!'}</p>
           ` : `
-            <p>We have received your message and will get back to you within 24 hours.</p>
+            <p>We have received your message and will get back to you within <strong>24–48 hours</strong>.</p>
             <p><strong>Your message:</strong></p>
             <blockquote style="border-left: 4px solid #ccc; margin: 10px 0; padding-left: 15px; font-style: italic;">
               ${formData.message}
@@ -211,8 +236,8 @@ io.on('connection', (socket) => {
           <p><em>This is an automated response from our ${isFeedback ? 'feedback' : 'contact form'} system.</em></p>
         `;
 
-      // Send email to business owner with SES primary, SMTP fallback
-      const ownerResp = await sendEmailWithFallback(
+      // Send email to business owner
+      const ownerResp = await sendEmail(
         ownerEmail,
         subject,
         ownerHtml,
@@ -221,7 +246,7 @@ io.on('connection', (socket) => {
 
       // Send confirmation email to the person who submitted the form
       const userSubject = isFeedback ? 'Thank you for your feedback!' : 'Thank you for contacting Oggarane Foods';
-      const userResp = await sendEmailWithFallback(
+      const userResp = await sendEmail(
         formData.email,
         userSubject,
         userHtml,
@@ -231,8 +256,8 @@ io.on('connection', (socket) => {
       // Log if fallback was used
       if (ownerResp.fallbackUsed || userResp.fallbackUsed) {
         console.warn('⚠️ Email fallback to SMTP was used:', {
-          owner: ownerResp.fallbackUsed ? 'SMTP' : 'SES',
-          user: userResp.fallbackUsed ? 'SMTP' : 'SES'
+          owner: ownerResp.fallbackUsed ? 'SMTP' : 'Azure Email',
+          user: userResp.fallbackUsed ? 'SMTP' : 'Azure Email'
         });
       }
 
@@ -321,43 +346,49 @@ app.get('/health', (req, res) => {
   });
 });
 
-// SMTP status endpoint
-app.get('/smtp-status', async (req, res) => {
+// Email service status endpoint
+app.get('/email-status', async (req, res) => {
+  const status = {
+    azureEmail: {
+      configured: !!emailClient,
+      status: emailClient ? 'configured' : 'not configured'
+    },
+    smtp: {
+      configured: true,
+      host: process.env.SMTP_HOST || 'smtpout.secureserver.net',
+      status: 'unknown'
+    },
+    timestamp: new Date().toISOString()
+  };
+
   try {
     // Verify SMTP connection
     await transporter.verify();
-    res.json({
-      status: 'online',
-      smtpConfigured: true,
-      host: process.env.SMTP_HOST || 'smtp.gmail.com',
-      timestamp: new Date().toISOString()
-    });
+    status.smtp.status = 'online';
   } catch (error) {
-    res.json({
-      status: 'offline',
-      smtpConfigured: true,
-      error: error.message,
-      host: process.env.SMTP_HOST || 'smtp.gmail.com',
-      timestamp: new Date().toISOString()
-    });
+    status.smtp.status = 'offline';
+    status.smtp.error = error.message;
   }
+
+  res.json(status);
 });
 
-// Test SMTP endpoint
-app.post('/test-smtp', async (req, res) => {
+// Test email endpoint
+app.post('/test-email', async (req, res) => {
   try {
-    const testMailOptions = {
-      from: process.env.SMTP_USER || 'your-email@gmail.com',
-      to: process.env.SMTP_USER || 'your-email@gmail.com',
-      subject: 'SMTP Test Email',
-      html: '<h2>SMTP Test Successful!</h2><p>This is a test email to verify SMTP configuration.</p>'
-    };
+    const testTo = process.env.CONTACT_EMAIL || process.env.SMTP_USER || 'support@oggaranefoods.com';
+    const testFrom = process.env.AZURE_EMAIL_FROM_ADDRESS || process.env.SMTP_USER || 'support@oggaranefoods.com';
+    const testSubject = 'Email Service Test - Oggarane Foods';
+    const testHtml = '<h2>Email Service Test Successful!</h2><p>This is a test email to verify email service configuration.</p><p><strong>Service:</strong> GoDaddy SMTP (with Azure Email fallback if configured)</p>';
 
-    const info = await transporter.sendMail(testMailOptions);
+    const result = await sendEmail(testTo, testSubject, testHtml, testFrom);
+    
     res.json({
       success: true,
       message: 'Test email sent successfully',
-      messageId: info.messageId
+      method: result.method,
+      messageId: result.messageId,
+      fallbackUsed: result.fallbackUsed || false
     });
   } catch (error) {
     res.status(500).json({

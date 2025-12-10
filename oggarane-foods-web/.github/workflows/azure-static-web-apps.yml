@@ -49,5 +49,5 @@ jobs:
           repo_token: ${{ secrets.GITHUB_TOKEN }}
           action: "upload"
           app_location: "oggarane-foods-web"
-          api_location: ""
+          api_location: "oggarane-foods-web/api"
           output_location: "oggarane-foods-web/dist"

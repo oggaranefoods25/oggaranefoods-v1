@@ -31,7 +31,7 @@ interface ReviewSocketPayload {
 const CustomerReviews = () => {
   const { t } = useTranslation();
   const navigate = useNavigate();
-  const { isConnected, socket } = useNotifications();
+  const { isConnected } = useNotifications();
   const [currentIndex, setCurrentIndex] = useState(0);
   const [showFeedbackForm, setShowFeedbackForm] = useState(false);
   const [recentReviews, setRecentReviews] = useState<Review[]>([]);
@@ -127,15 +127,9 @@ const CustomerReviews = () => {
 
     // Listen to socket events for real-time reviews
     if (socket) {
-      socket.on('new-review', handleNewReview);
-    }
-    
-    return () => {
-      if (socket) {
-        socket.off('new-review', handleNewReview);
-      }
-    };
-  }, [socket]);
+    // Real-time review updates removed - using static reviews for now
+    // Can be enhanced later with API polling if needed
+  }, []);
 
   const nextReview = () => {
     setCurrentIndex((prev) => (prev + 1) % allReviews.length);

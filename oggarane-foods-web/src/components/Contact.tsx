@@ -1,12 +1,11 @@
 import { useState } from "react";
 import { useForm } from "react-hook-form";
-import { Mail, Phone, MapPin, Send, CheckCircle, Wifi, WifiOff } from "lucide-react";
+import { Mail, Phone, MapPin, Send, CheckCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { useTranslation } from "react-i18next";
-import { useNotifications } from "@/contexts/NotificationContext";
 import { useScrollReveal } from "@/hooks/useScrollReveal";
 
 interface ContactFormData {
@@ -21,7 +20,6 @@ const Contact = () => {
   const [isSubmitted, setIsSubmitted] = useState(false);
   const { toast } = useToast();
   const { t } = useTranslation();
-  const { sendContactForm, isConnected, smtpStatus } = useNotifications();
 
   const {
     register,
@@ -33,26 +31,30 @@ const Contact = () => {
   const onSubmit = async (data: ContactFormData) => {
     setIsSubmitting(true);
     try {
-      if (isConnected) {
-        // Use real-time notification system
-        await sendContactForm(data);
+      // Call Azure Static Web Apps API function
+      const response = await fetch('/api/sendContactEmail', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(data),
+      });
+
+      const result = await response.json();
+
+      if (result.success) {
         setIsSubmitted(true);
         toast({
           title: t("Message Sent Successfully!"),
-          description: t("We'll get back to you within 24 hours. You'll receive real-time notifications about your submission."),
+          description: t("We'll get back to you within 24–48 hours. A confirmation email has been sent to your inbox."),
         });
+        reset();
+        setTimeout(() => setIsSubmitted(false), 5000);
       } else {
-        // Fallback to mock behavior if server is not connected
-        await new Promise(resolve => setTimeout(resolve, 2000));
-        setIsSubmitted(true);
-        toast({
-          title: t("Message Sent Successfully!"),
-          description: t("We'll get back to you within 24 hours. (Offline mode - notifications disabled)"),
-        });
+        throw new Error(result.message || 'Failed to send message');
       }
-      reset();
-      setTimeout(() => setIsSubmitted(false), 5000);
     } catch (error) {
+      console.error('Error sending contact form:', error);
       toast({
         title: t("Error"),
         description: t("Failed to send message. Please try again."),
@@ -160,26 +162,8 @@ const Contact = () => {
           {/* Contact Form */}
           <div className="fade-in-up" style={{ animationDelay: "0.5s" }}>
             <div className="rounded-[2.5rem] border border-white/35 bg-white/65 p-6 sm:p-8 shadow-[0_35px_110px_-55px_rgba(56,33,18,0.7)] backdrop-blur-2xl">
-              <div className="mb-6 flex items-center justify-between">
+              <div className="mb-6">
                 <h3 className="text-xl font-semibold text-foreground sm:text-2xl">{t("Send us a Message")}</h3>
-                <div className="flex items-center space-x-2">
-                  {smtpStatus === 'online' ? (
-                    <div className="flex items-center space-x-1 rounded-full border border-success/30 bg-success/15 px-3 py-1 text-xs font-semibold text-success">
-                      <Wifi className="h-3.5 w-3.5" />
-                      <span>{t("SMTP Online")}</span>
-                    </div>
-                  ) : smtpStatus === 'checking' ? (
-                    <div className="flex items-center space-x-1 rounded-full border border-warning/30 bg-warning/15 px-3 py-1 text-xs font-semibold text-warning">
-                      <WifiOff className="h-3.5 w-3.5 animate-pulse" />
-                      <span>{t("Checking...")}</span>
-                    </div>
-                  ) : (
-                    <div className="flex items-center space-x-1 rounded-full border border-warning/40 bg-warning/15 px-3 py-1 text-xs font-semibold text-warning">
-                      <WifiOff className="h-3.5 w-3.5" />
-                      <span>{t("SMTP Offline")}</span>
-                    </div>
-                  )}
-                </div>
               </div>
               
               <form onSubmit={handleSubmit(onSubmit)} className="space-y-4 sm:space-y-6">
