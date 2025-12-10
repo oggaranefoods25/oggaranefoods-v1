@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Star, Quote, ChevronLeft, ChevronRight, Heart, Award, Users, MessageSquare, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -21,12 +21,6 @@ interface Review {
   product: string;
 }
 
-interface ReviewSocketPayload {
-  name: string;
-  rating: number;
-  review: string;
-  product: string;
-}
 
 const CustomerReviews = () => {
   const { t } = useTranslation();
@@ -108,28 +102,9 @@ const CustomerReviews = () => {
   // Combine static reviews with recent reviews
   const allReviews = [...recentReviews, ...staticReviews];
 
-  // Listen for new feedback submissions
-  useEffect(() => {
-    const handleNewReview = (reviewData: ReviewSocketPayload) => {
-      const newReview: Review = {
-        id: Date.now(),
-        name: reviewData.name,
-        location: "Recent Customer",
-        rating: reviewData.rating,
-        review: reviewData.review,
-        date: "Just now",
-        avatar: reviewData.name.split(' ').map((n: string) => n[0]).join('').toUpperCase(),
-        verified: true,
-        product: reviewData.product
-      };
-      setRecentReviews(prev => [newReview, ...prev.slice(0, 2)]); // Keep only 3 most recent
-    };
-
-    // Listen to socket events for real-time reviews
-    if (socket) {
-    // Real-time review updates removed - using static reviews for now
-    // Can be enhanced later with API polling if needed
-  }, []);
+  // Real-time review updates removed - using static reviews for now
+  // Can be enhanced later with API polling if needed
+  // useEffect removed since we're not using Socket.IO anymore
 
   const nextReview = () => {
     setCurrentIndex((prev) => (prev + 1) % allReviews.length);
