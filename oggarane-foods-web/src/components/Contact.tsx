@@ -51,13 +51,19 @@ const Contact = () => {
         reset();
         setTimeout(() => setIsSubmitted(false), 5000);
       } else {
-        throw new Error(result.message || 'Failed to send message');
+        // Log detailed error for debugging
+        console.error('API Error Response:', result);
+        throw new Error(result.message || result.error || 'Failed to send message');
       }
     } catch (error) {
       console.error('Error sending contact form:', error);
+      console.error('Error details:', error.message);
+      
+      // Show more detailed error message
+      const errorMessage = error.message || t("Failed to send message. Please try again.");
       toast({
         title: t("Error"),
-        description: t("Failed to send message. Please try again."),
+        description: errorMessage,
         variant: "destructive",
       });
     } finally {

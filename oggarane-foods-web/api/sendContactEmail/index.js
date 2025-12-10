@@ -1,7 +1,9 @@
 const nodemailer = require('nodemailer');
 
 module.exports = async function (context, req) {
-  context.log('Contact form submission received');
+  context.log('=== Contact form submission received ===');
+  context.log('Request method:', req.method);
+  context.log('Request body:', JSON.stringify(req.body));
 
   // Handle CORS preflight
   if (req.method === 'OPTIONS') {
@@ -22,6 +24,7 @@ module.exports = async function (context, req) {
 
     // Validate required fields
     if (!name || !email || (!message && !review)) {
+      context.log('ERROR: Missing required fields', { name: !!name, email: !!email, message: !!message, review: !!review });
       context.res = {
         status: 400,
         headers: {
@@ -30,7 +33,8 @@ module.exports = async function (context, req) {
         },
         body: { 
           success: false, 
-          message: 'Missing required fields' 
+          message: 'Missing required fields',
+          details: { name: !!name, email: !!email, message: !!message, review: !!review }
         }
       };
       return;
@@ -50,7 +54,35 @@ module.exports = async function (context, req) {
     const contactEmail = process.env.CONTACT_EMAIL || 'support@oggaranefoods.com';
     const fromAddress = process.env.AZURE_EMAIL_FROM_ADDRESS || smtpUser;
 
+    // Log environment variable status (without exposing password)
+    context.log('=== Environment Variables Check ===');
+    context.log('SMTP_HOST:', smtpHost);
+    context.log('SMTP_PORT:', smtpPort);
+    context.log('SMTP_USER:', smtpUser);
+    context.log('SMTP_PASS:', smtpPass ? '***SET***' : '***NOT SET***');
+    context.log('CONTACT_EMAIL:', contactEmail);
+    context.log('FROM_ADDRESS:', fromAddress);
+
+    // Validate SMTP password is set
+    if (!smtpPass) {
+      context.log.error('ERROR: SMTP_PASS environment variable is not set!');
+      context.res = {
+        status: 500,
+        headers: {
+          'Content-Type': 'application/json',
+          'Access-Control-Allow-Origin': '*'
+        },
+        body: {
+          success: false,
+          message: 'Email service configuration error. Please contact support.',
+          error: 'SMTP password not configured'
+        }
+      };
+      return;
+    }
+
     // Configure SMTP transporter
+    context.log('Configuring SMTP transporter...');
     const transporter = nodemailer.createTransport({
       host: smtpHost,
       port: smtpPort,
@@ -58,8 +90,23 @@ module.exports = async function (context, req) {
       auth: {
         user: smtpUser,
         pass: smtpPass
-      }
+      },
+      // Add connection timeout
+      connectionTimeout: 10000,
+      greetingTimeout: 10000,
+      socketTimeout: 10000
     });
+
+    // Verify SMTP connection
+    context.log('Verifying SMTP connection...');
+    try {
+      await transporter.verify();
+      context.log('✅ SMTP connection verified successfully');
+    } catch (verifyError) {
+      context.log.error('❌ SMTP verification failed:', verifyError.message);
+      context.log.error('Full error:', JSON.stringify(verifyError));
+      throw new Error(`SMTP verification failed: ${verifyError.message}`);
+    }
 
     // Prepare email content for business owner
     const ownerHtml = `
@@ -107,6 +154,7 @@ module.exports = async function (context, req) {
     `;
 
     // Send email to business owner
+    context.log(`Sending email to business owner: ${contactEmail}`);
     const ownerMailOptions = {
       from: fromAddress,
       to: contactEmail,
@@ -114,10 +162,18 @@ module.exports = async function (context, req) {
       html: ownerHtml
     };
 
-    await transporter.sendMail(ownerMailOptions);
-    context.log(`✅ Email sent to business owner: ${contactEmail}`);
+    try {
+      const ownerResult = await transporter.sendMail(ownerMailOptions);
+      context.log(`✅ Email sent to business owner: ${contactEmail}`);
+      context.log('Message ID:', ownerResult.messageId);
+    } catch (ownerError) {
+      context.log.error('❌ Failed to send email to business owner:', ownerError.message);
+      context.log.error('Full error:', JSON.stringify(ownerError));
+      throw new Error(`Failed to send email to business owner: ${ownerError.message}`);
+    }
 
     // Send confirmation email to user
+    context.log(`Sending confirmation email to user: ${email}`);
     const userSubject = isFeedback ? 'Thank you for your feedback!' : 'Thank you for contacting Oggarane Foods';
     const userMailOptions = {
       from: fromAddress,
@@ -126,8 +182,16 @@ module.exports = async function (context, req) {
       html: userHtml
     };
 
-    await transporter.sendMail(userMailOptions);
-    context.log(`✅ Confirmation email sent to user: ${email}`);
+    try {
+      const userResult = await transporter.sendMail(userMailOptions);
+      context.log(`✅ Confirmation email sent to user: ${email}`);
+      context.log('Message ID:', userResult.messageId);
+    } catch (userError) {
+      context.log.error('❌ Failed to send confirmation email to user:', userError.message);
+      context.log.error('Full error:', JSON.stringify(userError));
+      // Don't throw here - owner email was sent successfully
+      context.log.warn('⚠️ Owner email was sent, but user confirmation failed');
+    }
 
     context.res = {
       status: 200,
@@ -142,7 +206,12 @@ module.exports = async function (context, req) {
     };
 
   } catch (error) {
-    context.log.error('Error sending email:', error);
+    context.log.error('=== ERROR SENDING EMAIL ===');
+    context.log.error('Error message:', error.message);
+    context.log.error('Error stack:', error.stack);
+    context.log.error('Full error object:', JSON.stringify(error, Object.getOwnPropertyNames(error)));
+    
+    // Return detailed error for debugging (remove in production if needed)
     context.res = {
       status: 500,
       headers: {
@@ -152,7 +221,15 @@ module.exports = async function (context, req) {
       body: {
         success: false,
         message: 'Failed to send email. Please try again later.',
-        error: error.message
+        error: error.message,
+        errorType: error.constructor.name,
+        // Include more details for debugging
+        details: process.env.NODE_ENV === 'development' ? {
+          stack: error.stack,
+          code: error.code,
+          command: error.command,
+          response: error.response
+        } : undefined
       }
     };
   }
