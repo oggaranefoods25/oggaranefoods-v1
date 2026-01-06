@@ -21,12 +21,12 @@ If you're not receiving emails after submitting the contact form, follow these s
 
 In Azure Portal → Your Static Web App → Configuration → Application settings:
 
-**Required Variables:**
+**Required Variables (recommended Office 365 SMTP):**
 ```
-SMTP_HOST = smtpout.secureserver.net
-SMTP_PORT = 465
+SMTP_HOST = smtp.office365.com
+SMTP_PORT = 587
 SMTP_USER = support@oggaranefoods.com
-SMTP_PASS = P@$$word@Ogg@r@ne
+SMTP_PASS = <your-secure-password-or-app-password>
 CONTACT_EMAIL = support@oggaranefoods.com
 AZURE_EMAIL_FROM_ADDRESS = support@oggaranefoods.com
 ```
@@ -66,18 +66,18 @@ AZURE_EMAIL_FROM_ADDRESS = support@oggaranefoods.com
 - `500 Internal Server Error` - Function execution error
 - `Network error` - Connection issue
 
-### Step 5: Verify GoDaddy SMTP Settings
+### Step 5: Verify Office 365 / SMTP Settings
 
-**GoDaddy SMTP Configuration:**
-- **Server:** `smtpout.secureserver.net`
-- **Port:** `465` (SSL) or `587` (STARTTLS)
-- **Security:** SSL/TLS for port 465
-- **Authentication:** Required (full email and password)
+**Office 365 SMTP Configuration (recommended):**
+- **Server:** `smtp.office365.com`
+- **Port:** `587` (STARTTLS)
+- **Security:** TLS
+- **Authentication:** Required (full email and password or app password)
 
-**Test GoDaddy Email:**
-1. Try logging into `support@oggaranefoods.com` via webmail
+**Test Mailbox:**
+1. Try logging into `support@oggaranefoods.com` via Outlook / webmail
 2. Verify the password is correct
-3. Check if the account is active and not suspended
+3. Check if the account is active and not locked
 
 ### Step 6: Check Network Restrictions
 
@@ -96,16 +96,14 @@ Azure Static Web Apps may have network restrictions. Verify:
 
 #### Issue: "SMTP verification failed"
 **Solution:**
-- Verify GoDaddy email credentials are correct
-- Check if GoDaddy account is active
-- Try port 587 instead of 465
-- Verify SMTP is enabled for your GoDaddy email account
+- Verify Office 365 email credentials are correct
+- Check if the account is active and not locked
+- Ensure SMTP AUTH is enabled for the mailbox (in Microsoft 365 admin)
 
 #### Issue: "Failed to send email" with timeout
 **Solution:**
-- GoDaddy SMTP server might be blocking Azure IPs
-- Contact GoDaddy support to whitelist Azure IP ranges
-- Consider using a different email service (SendGrid, etc.)
+- Verify outbound SMTP is allowed from your Azure environment
+- Ensure no firewall rules block `smtp.office365.com:587`
 
 #### Issue: Function not found (404)
 **Solution:**

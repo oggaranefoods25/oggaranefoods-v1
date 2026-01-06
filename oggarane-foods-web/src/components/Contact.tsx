@@ -40,7 +40,39 @@ const Contact = () => {
         body: JSON.stringify(data),
       });
 
-      const result = await response.json();
+      // Check if response is ok and has content
+      if (!response.ok) {
+        // Try to parse error response, but handle if it's not JSON
+        let errorMessage = `Server error: ${response.status} ${response.statusText}`;
+        try {
+          const errorText = await response.text();
+          if (errorText) {
+            try {
+              const errorJson = JSON.parse(errorText);
+              errorMessage = errorJson.message || errorJson.error || errorMessage;
+            } catch {
+              errorMessage = errorText || errorMessage;
+            }
+          }
+        } catch {
+          // If we can't parse the error, use the status text
+        }
+        throw new Error(errorMessage);
+      }
+
+      // Check if response has content before parsing JSON
+      const responseText = await response.text();
+      if (!responseText || responseText.trim() === '') {
+        throw new Error('Empty response from server');
+      }
+
+      let result;
+      try {
+        result = JSON.parse(responseText);
+      } catch (parseError) {
+        console.error('Failed to parse JSON response:', responseText);
+        throw new Error('Invalid response format from server');
+      }
 
       if (result.success) {
         setIsSubmitted(true);
@@ -57,10 +89,10 @@ const Contact = () => {
       }
     } catch (error) {
       console.error('Error sending contact form:', error);
-      console.error('Error details:', error.message);
+      console.error('Error details:', error instanceof Error ? error.message : String(error));
       
       // Show more detailed error message
-      const errorMessage = error.message || t("Failed to send message. Please try again.");
+      const errorMessage = error instanceof Error ? error.message : t("Failed to send message. Please try again.");
       toast({
         title: t("Error"),
         description: errorMessage,

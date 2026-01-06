@@ -1,23 +1,47 @@
 const nodemailer = require('nodemailer');
 
 module.exports = async function (context, req) {
-  context.log('=== Contact form submission received ===');
-  context.log('Request method:', req.method);
-  context.log('Request body:', JSON.stringify(req.body));
-
-  // Handle CORS preflight
-  if (req.method === 'OPTIONS') {
+  // Ensure we always return JSON, even if something goes wrong early
+  const sendJsonResponse = (status, body) => {
     context.res = {
-      status: 200,
+      status: status,
       headers: {
-        'Access-Control-Allow-Origin': '*',
-        'Access-Control-Allow-Methods': 'POST, OPTIONS',
-        'Access-Control-Allow-Headers': 'Content-Type'
+        'Content-Type': 'application/json',
+        'Access-Control-Allow-Origin': '*'
       },
-      body: ''
+      body: body
     };
-    return;
-  }
+  };
+
+  try {
+    context.log('=== Contact form submission received ===');
+    context.log('Request method:', req.method);
+    context.log('Request body:', JSON.stringify(req.body || {}));
+
+    // Handle CORS preflight
+    if (req.method === 'OPTIONS') {
+      context.res = {
+        status: 200,
+        headers: {
+          'Access-Control-Allow-Origin': '*',
+          'Access-Control-Allow-Methods': 'POST, OPTIONS',
+          'Access-Control-Allow-Headers': 'Content-Type'
+        },
+        body: ''
+      };
+      return;
+    }
+
+    // Ensure request body exists
+    if (!req.body) {
+      context.log('WARNING: Request body is missing or empty');
+      sendJsonResponse(400, {
+        success: false,
+        message: 'Request body is required',
+        error: 'Missing request body'
+      });
+      return;
+    }
 
   try {
     const { name, email, phone, message, rating, product, review } = req.body;
@@ -25,18 +49,11 @@ module.exports = async function (context, req) {
     // Validate required fields
     if (!name || !email || (!message && !review)) {
       context.log('ERROR: Missing required fields', { name: !!name, email: !!email, message: !!message, review: !!review });
-      context.res = {
-        status: 400,
-        headers: {
-          'Content-Type': 'application/json',
-          'Access-Control-Allow-Origin': '*'
-        },
-        body: { 
-          success: false, 
-          message: 'Missing required fields',
-          details: { name: !!name, email: !!email, message: !!message, review: !!review }
-        }
-      };
+      sendJsonResponse(400, {
+        success: false,
+        message: 'Missing required fields',
+        details: { name: !!name, email: !!email, message: !!message, review: !!review }
+      });
       return;
     }
 
@@ -47,8 +64,9 @@ module.exports = async function (context, req) {
       : `New Contact Form Submission from ${name}`;
 
     // Get email configuration from environment variables
-    const smtpHost = process.env.SMTP_HOST || 'smtpout.secureserver.net';
-    const smtpPort = parseInt(process.env.SMTP_PORT) || 465;
+    // Defaults are production-friendly for Office 365 SMTP
+    const smtpHost = process.env.SMTP_HOST || 'smtp.office365.com';
+    const smtpPort = parseInt(process.env.SMTP_PORT) || 587;
     const smtpUser = process.env.SMTP_USER || 'support@oggaranefoods.com';
     const smtpPass = process.env.SMTP_PASS || '';
     const contactEmail = process.env.CONTACT_EMAIL || 'support@oggaranefoods.com';
@@ -66,22 +84,15 @@ module.exports = async function (context, req) {
     // Validate SMTP password is set
     if (!smtpPass) {
       context.log.error('ERROR: SMTP_PASS environment variable is not set!');
-      context.res = {
-        status: 500,
-        headers: {
-          'Content-Type': 'application/json',
-          'Access-Control-Allow-Origin': '*'
-        },
-        body: {
-          success: false,
-          message: 'Email service configuration error. Please contact support.',
-          error: 'SMTP password not configured'
-        }
-      };
+      sendJsonResponse(500, {
+        success: false,
+        message: 'Email service configuration error. Please contact support.',
+        error: 'SMTP password not configured'
+      });
       return;
     }
 
-    // Configure SMTP transporter
+    // Configure SMTP transporter (STARTTLS for 587, SSL for 465)
     context.log('Configuring SMTP transporter...');
     const transporter = nodemailer.createTransport({
       host: smtpHost,
@@ -193,17 +204,10 @@ module.exports = async function (context, req) {
       context.log.warn('⚠️ Owner email was sent, but user confirmation failed');
     }
 
-    context.res = {
-      status: 200,
-      headers: {
-        'Content-Type': 'application/json',
-        'Access-Control-Allow-Origin': '*'
-      },
-      body: {
-        success: true,
-        message: isFeedback ? 'Feedback submitted successfully!' : 'Message sent successfully!'
-      }
-    };
+    sendJsonResponse(200, {
+      success: true,
+      message: isFeedback ? 'Feedback submitted successfully!' : 'Message sent successfully!'
+    });
 
   } catch (error) {
     context.log.error('=== ERROR SENDING EMAIL ===');
@@ -212,26 +216,19 @@ module.exports = async function (context, req) {
     context.log.error('Full error object:', JSON.stringify(error, Object.getOwnPropertyNames(error)));
     
     // Return detailed error for debugging (remove in production if needed)
-    context.res = {
-      status: 500,
-      headers: {
-        'Content-Type': 'application/json',
-        'Access-Control-Allow-Origin': '*'
-      },
-      body: {
-        success: false,
-        message: 'Failed to send email. Please try again later.',
-        error: error.message,
-        errorType: error.constructor.name,
-        // Include more details for debugging
-        details: process.env.NODE_ENV === 'development' ? {
-          stack: error.stack,
-          code: error.code,
-          command: error.command,
-          response: error.response
-        } : undefined
-      }
-    };
+    sendJsonResponse(500, {
+      success: false,
+      message: 'Failed to send email. Please try again later.',
+      error: error.message,
+      errorType: error.constructor.name,
+      // Include more details for debugging
+      details: process.env.NODE_ENV === 'development' ? {
+        stack: error.stack,
+        code: error.code,
+        command: error.command,
+        response: error.response
+      } : undefined
+    });
   }
 };
 

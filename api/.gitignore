@@ -1,0 +1,14 @@
+# Azure Functions local settings (contains sensitive credentials)
+local.settings.json
+
+# Node modules
+node_modules/
+
+# Logs
+*.log
+npm-debug.log*
+
+# OS files
+.DS_Store
+Thumbs.db
+
